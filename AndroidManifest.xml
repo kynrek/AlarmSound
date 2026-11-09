@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="local.alarmsound">
+
+    <!-- Lets the settings screen change the phone alarm volume while the app is open. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+
+    <application
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
+        android:theme="@style/AppTheme"
+        android:allowBackup="false">
+
+        <!-- Opening this once after install takes the app out of Android's "stopped" state,
+             so it can receive the broadcasts. It also has test buttons. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Home Assistant companion app sends:
+             command_broadcast_intent, package local.alarmsound,
+             action local.alarmsound.PLAY, extras "sound:beeps" or "sound:siren" -->
+        <receiver
+            android:name=".PlayReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="local.alarmsound.PLAY" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

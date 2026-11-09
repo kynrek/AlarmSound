@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 80s sunset gradient -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="270" android:startColor="#2B1055" android:centerColor="#7A1E6C" android:endColor="#E8505B" />
+</shape>

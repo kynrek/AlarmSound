@@ -42,6 +42,14 @@ data:
 
 Send your normal notification (with an Acknowledge action, if you want one) alongside it. For a "ring until
 acknowledged" alert, repeat both every 30 s in a script until the `mobile_app_notification_action` event arrives.
+[`examples/home-assistant-script.yaml`](examples/home-assistant-script.yaml) is a complete script that does both.
+
+Post that notification on a **low-importance channel** (`channel: Alarm alert quiet`, `importance: low`), so it
+makes no sound of its own. **Don't** use `channel: alarm_stream` for it. That channel plays the phone's default alarm
+tone, so whenever the ringer is on normal you'd hear the alarm tone at the same time as Alarm Sound. A low-importance
+notification doesn't pop up as a banner, but it shows in the shade and on the lock screen with its buttons. To get the
+banner back, use a high-importance channel and set that channel's sound to *None* in the phone's notification
+settings.
 
 ## Build
 This repo has no Gradle. It uses the Android SDK's build tools directly (`aapt2`, `javac`, `d8`, `zipalign`,

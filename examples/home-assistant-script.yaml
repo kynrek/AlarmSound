@@ -1,0 +1,93 @@
+# Example Home Assistant script (scripts.yaml) for Alarm Sound.
+#
+# - repeat: false -> one "priority" alert: Alarm Sound plays the priority sound + speaks the text.
+# - repeat: true  -> "urgent": re-alerts every 30 s until "Acknowledge" is tapped (max 15 min).
+#
+# Call it with:
+#   action: script.turn_on
+#   target: {entity_id: script.phone_alarm}
+#   data: {variables: {message: "Garage left open", title: "Garage", repeat: true}}
+#
+# Replace notify.mobile_app_my_phone with your phone's notify action. For several phones,
+# copy the script once per phone (YAML anchors can share the fields and sequence).
+phone_alarm:
+  alias: Phone alarm
+  mode: restart
+  variables:
+    notify_svc: notify.mobile_app_my_phone
+  fields:
+    message:
+      description: Alert text
+      required: true
+      selector:
+        text:
+    title:
+      description: Alert title
+      default: Alert
+      selector:
+        text:
+    repeat:
+      description: Keep alerting until acknowledged
+      default: false
+      selector:
+        boolean:
+  sequence:
+  - variables:
+      ttl_title: "{{ title | default('Alert') }}"
+      rep: "{{ repeat | default(false) | bool }}"
+      ack: "ALARM_ACK_{{ context.id }}"
+  - repeat:
+      sequence:
+      # 1. Alarm Sound: plays the sound, then speaks the text (alarm stream, speaker only).
+      - action: "{{ notify_svc }}"
+        continue_on_error: true
+        data:
+          message: command_broadcast_intent
+          data:
+            intent_package_name: local.alarmsound
+            intent_action: local.alarmsound.PLAY
+            intent_extras: "level:{{ 'urgent' if rep else 'priority' }},text:{{ (ttl_title ~ '. ' ~ message) | urlencode }}"
+      # 2. The visible notification with the Acknowledge button.
+      #    Use a LOW-importance channel so it makes no sound of its own. Don't use
+      #    channel: alarm_stream here: it plays the phone's alarm tone on top of Alarm Sound
+      #    whenever the ringer is on normal.
+      - action: "{{ notify_svc }}"
+        data:
+          title: "{{ ttl_title }}{{ ' (' ~ repeat.index ~ ')' if repeat.index > 1 else '' }}"
+          message: "{{ message }}"
+          data:
+            ttl: 0
+            priority: high
+            channel: Alarm alert quiet
+            importance: low
+            tag: phone_alarm
+            # Own group, so Android doesn't bundle it with other Home Assistant notifications
+            # and hide the Acknowledge button.
+            group: phone_alarm
+            sticky: "true"
+            actions:
+            - action: "{{ ack }}"
+              title: Acknowledge
+      - if:
+        - condition: template
+          value_template: "{{ rep }}"
+        then:
+        - wait_for_trigger:
+          - trigger: event
+            event_type: mobile_app_notification_action
+            event_data:
+              action: "{{ ack }}"
+          timeout: "00:00:30"
+          continue_on_timeout: true
+      until:
+      - condition: template
+        value_template: "{{ not rep or wait.trigger is not none or repeat.index >= 30 }}"
+  - if:
+    - condition: template
+      value_template: "{{ rep and wait.trigger is not none }}"
+    then:
+    - action: "{{ notify_svc }}"
+      data:
+        message: clear_notification
+        data:
+          tag: phone_alarm
